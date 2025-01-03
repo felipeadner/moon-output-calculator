@@ -1,83 +1,111 @@
-# Função para calcular a quantidade de unidades de cada tipo
-def calcular_unidades(taxa_aproveitamento_lua_percent, proporcao_mineral1, proporcao_mineral2, proporcao_mineral3, proporcao_mineral4):
-    # Tamanho total com base na Taxa de Aproveitamento da Lua em m³
-    volume_total = (taxa_aproveitamento_lua_percent / 100) * 30000
+import pandas as pd
 
-    # Calcula o volume de cada tipo de mineral
-    volume_mineral1 = (proporcao_mineral1 / 100) * volume_total
-    volume_mineral2 = (proporcao_mineral2 / 100) * volume_total
-    volume_mineral3 = (proporcao_mineral3 / 100) * volume_total
-    volume_mineral4 = (proporcao_mineral4 / 100) * volume_total
-
-    # Calcula a quantidade de unidades de cada tipo
-    unidades_mineral1 = volume_mineral1 / 10
-    unidades_mineral2 = volume_mineral2 / 10
-    unidades_mineral3 = volume_mineral3 / 10
-    unidades_mineral4 = volume_mineral4 / 10
-
-    # Retorna os resultados como um dicionário
+# Function to calculate the number of units of each type
+def calculate_units(moon_utilization_rate_percent, mineral1_proportion, mineral2_proportion, mineral3_proportion, mineral4_proportion):
+    total_volume = (moon_utilization_rate_percent / 100) * 30000
+    mineral1_volume = (mineral1_proportion / 100) * total_volume
+    mineral2_volume = (mineral2_proportion / 100) * total_volume
+    mineral3_volume = (mineral3_proportion / 100) * total_volume
+    mineral4_volume = (mineral4_proportion / 100) * total_volume
+    mineral1_units = mineral1_volume / 10
+    mineral2_units = mineral2_volume / 10
+    mineral3_units = mineral3_volume / 10
+    mineral4_units = mineral4_volume / 10
     return {
-        "Mineral #1": int(unidades_mineral1),
-        "Mineral #2": int(unidades_mineral2),
-        "Mineral #3": int(unidades_mineral3),
-        "Mineral #4": int(unidades_mineral4)
+        "Mineral #1": int(mineral1_units),
+        "Mineral #2": int(mineral2_units),
+        "Mineral #3": int(mineral3_units),
+        "Mineral #4": int(mineral4_units)
     }
 
-# Função para calcular a quantidade de unidades em um mês
-def calcular_unidades_mensal(taxa_aproveitamento_lua_percent, proporcao_mineral1, proporcao_mineral2, proporcao_mineral3, proporcao_mineral4):
-    # Calcula as unidades para uma taxa de aproveitamento
-    unidades_por_taxa = calcular_unidades(taxa_aproveitamento_lua_percent, proporcao_mineral1, proporcao_mineral2, proporcao_mineral3, proporcao_mineral4)
+# Function to calculate the number of units in a month
+def calculate_monthly_units(moon_utilization_rate_percent, mineral1_proportion, mineral2_proportion, mineral3_proportion, mineral4_proportion):
+    units_per_rate = calculate_units(moon_utilization_rate_percent, mineral1_proportion, mineral2_proportion, mineral3_proportion, mineral4_proportion)
+    hours_per_month = 24 * 30
+    monthly_units = {type: quantity * hours_per_month for type, quantity in units_per_rate.items()}
+    return monthly_units
 
-    # Considerando 1 taxa de aproveitamento por hora, 24 horas por dia, durante 30 dias
-    horas_por_mes = 24 * 30
-
-    # Multiplica a quantidade de unidades por horas no mês
-    unidades_mensal = {tipo: quantidade * horas_por_mes for tipo, quantidade in unidades_por_taxa.items()}
-
-    return unidades_mensal
-
-# Função para validar as entradas do usuário
-def validar_entrada(valor, permitir_zero=False):
+# Function to validate inputs
+def validate_input(value, allow_zero=False, integer=False):
     try:
-        valor_float = round(float(valor), 2)
-        if valor_float < 0 or (valor_float == 0 and not permitir_zero):
-            raise ValueError
-        return valor_float
+        if pd.isna(value):
+            if allow_zero:
+                return 0 if integer else 0.0
+            raise ValueError("Missing value")
+        value = str(value).replace(",", ".")
+        value_float = float(value)
+        if integer:
+            value_int = int(value_float)
+            if value_int <= 0:
+                raise ValueError
+            return value_int
+        else:
+            value_float = round(value_float, 2)
+            if value_float < 0 or (value_float == 0 and not allow_zero):
+                raise ValueError
+            return value_float
     except ValueError:
-        raise ValueError("Entrada inválida. Por favor, insira um número positivo com até 2 casas decimais.")
+        raise ValueError(f"Invalid input: '{value}'. Please enter a valid number.")
 
-# Interação via prompt
 if __name__ == "__main__":
-    # Solicita ao usuário os nomes e valores necessários
-    mineral1_nome = input("Informe o nome do Mineral #1: ") or "Mineral #1"
-    mineral2_nome = input("Informe o nome do Mineral #2: ") or "Mineral #2"
-    mineral3_nome = input("Informe o nome do Mineral #3: ") or "Mineral #3"
-    mineral4_nome = input("Informe o nome do Mineral #4: ") or "Mineral #4"
-
+    file_path = input("Enter the path of the spreadsheet (CSV): ")
     try:
-        taxa_aproveitamento_lua_percent = validar_entrada(input("Informe a Taxa de Aproveitamento da Lua em porcentagem (100% = 30000 m³, não pode ser 0%): "))
-        proporcao_mineral1 = validar_entrada(input(f"Informe a proporção do {mineral1_nome} em %: "))
-        proporcao_mineral2 = validar_entrada(input(f"Informe a proporção do {mineral2_nome} em %: "))
-        proporcao_mineral3 = validar_entrada(input(f"Informe a proporção do {mineral3_nome} em %: "))
-        proporcao_mineral4 = validar_entrada(input(f"Informe a proporção do {mineral4_nome} em % (pode ser 0%): "), permitir_zero=True)
+        df = pd.read_csv(file_path)
 
-        # Chamada da função para unidades por taxa de aproveitamento
-        resultado = calcular_unidades(taxa_aproveitamento_lua_percent, proporcao_mineral1, proporcao_mineral2, proporcao_mineral3, proporcao_mineral4)
+        expected_columns = [
+            "System", "Planet", "Moon", "Utilization Rate", "Mineral Name1", "Mineral Proportion1",
+            "Mineral Name2", "Mineral Proportion2", "Mineral Name3", "Mineral Proportion3",
+            "Mineral Name4", "Mineral Proportion4"
+        ]
 
-        # Exibindo o resultado por taxa de aproveitamento
-        print("\nQuantidade de unidades por tipo (por Taxa de Aproveitamento da Lua):")
-        for tipo, quantidade in resultado.items():
-            nome = locals().get(f"{tipo.lower().replace(' ', '_')}_nome", tipo)
-            print(f"{nome}: {quantidade} unidades")
+        if not all(col in df.columns for col in expected_columns):
+            raise ValueError("The spreadsheet must contain the following columns: " + ", ".join(expected_columns))
 
-        # Chamada da função para unidades mensais
-        resultado_mensal = calcular_unidades_mensal(taxa_aproveitamento_lua_percent, proporcao_mineral1, proporcao_mineral2, proporcao_mineral3, proporcao_mineral4)
+        results = []
 
-        # Exibindo o resultado mensal
-        print("\nQuantidade de unidades por tipo (em um mês de 30 dias):")
-        for tipo, quantidade in resultado_mensal.items():
-            nome = locals().get(f"{tipo.lower().replace(' ', '_')}_nome", tipo)
-            print(f"{nome}: {quantidade} unidades")
+        for index, row in df.iterrows():
+            try:
+                system = str(row["System"]).strip()
+                planet = validate_input(row["Planet"], integer=True)
+                moon = validate_input(row["Moon"], integer=True)
+                utilization_rate = validate_input(row["Utilization Rate"])
+                mineral1_proportion = validate_input(row["Mineral Proportion1"])
+                mineral2_proportion = validate_input(row["Mineral Proportion2"])
+                mineral3_proportion = validate_input(row["Mineral Proportion3"])
+                mineral4_proportion = validate_input(row["Mineral Proportion4"], allow_zero=True)
 
+                mineral1_name = row["Mineral Name1"]
+                mineral2_name = row["Mineral Name2"]
+                mineral3_name = row["Mineral Name3"]
+                mineral4_name = row["Mineral Name4"]
+
+                monthly_result = calculate_monthly_units(
+                    utilization_rate, mineral1_proportion, mineral2_proportion, mineral3_proportion, mineral4_proportion
+                )
+
+                results.append({
+                    "System": system,
+                    "Planet": planet,
+                    "Moon": moon,
+                    "Mineral Name1": mineral1_name,
+                    "Monthly Result Mineral1": monthly_result["Mineral #1"],
+                    "Mineral Name2": mineral2_name,
+                    "Monthly Result Mineral2": monthly_result["Mineral #2"],
+                    "Mineral Name3": mineral3_name,
+                    "Monthly Result Mineral3": monthly_result["Mineral #3"],
+                    "Mineral Name4": mineral4_name,
+                    "Monthly Result Mineral4": monthly_result["Mineral #4"]
+                })
+
+            except ValueError as e:
+                print(f"Error in row {index + 1}: {e}")
+
+        df_results = pd.DataFrame(results)
+        output_path = "results.csv"
+        df_results.to_csv(output_path, index=False)
+        print(f"Results saved in the file: {output_path}")
+
+    except FileNotFoundError:
+        print("File not found. Please check the path and try again.")
     except ValueError as e:
         print(e)
